@@ -19,4 +19,10 @@ Mysql Enterprise support porporciona acceso directo al equipo de soporte de mysq
 * Mysql Shell:
     Herramienta de cliente integrada que se utiliza para todas las oearaciones de mysql y las funciones administrativas.
     Ofrece soporte en varios lenguajes ej: js, python y SQL
-
+* MySQL Server:
+    Permite la gestion tanto SQL como NoSQL. Incluye un analizador que interpreta los comandos SQL, un optimizador ejecutar consultas de manera eficaz.
+    Por defecto usa InnoDB como motor de almacenamiento.
+* Mysql Enterprise Tools:
+    Son herramientas exclusivas de este plan. Diseñadas para implementaciones a nivel empresarial. Tambien incluye plugins, como firewall, auditorias, encriptacion, etc.
+* MySQL Enterprise Management Tools:
+    Enterprise Bakcup,Workbench, Monitor (Performance y disponibilidad. Visualizar problemas en queries, permite realizar pre )
