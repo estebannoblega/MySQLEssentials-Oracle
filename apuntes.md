@@ -100,6 +100,59 @@ En linux es muy variable debido a las distintas distribuciones (ya que cada una 
     - '%' permite que el usuario inicie sesión desde cualquier host o dentro de una dirección ip para limitar el acceso desde ciertas ip dentro de una red.
     - La primera vez se instalan varias cuentas de sistema. La única cuenta que puede iniciar sesión es la cuenta adminitrativa 'root'@'localhost'.
     - Por seguridad, la contraseña se debe cambiar, mysql no deja hacer ninguna acción sin antes cambiar la contraseña.
-    - MySQL se ejecuta como usuario a nivel de sistema. Cada usuario tiene su propio método para crear dicho usuario. En gral se utilizan los siguientes pasos:
-        -   
+    - MySQL se ejecuta como usuario a nivel de sistema. Cada SO tiene su propio método para crear dicho usuario. En gral se utilizan los siguientes pasos (salvo windows o un RPM en Oracle linux):
+        - Cada proceso de instalación crea y configura el usuario a nivel de sistema.
+        - Si se hace desde un binario:
+            - Se debe crear el usuario que corra el proceso mysql server
+            - Se debe crear los directorios de la infraestructura.
+            - Antes de iniciar, se debe configurar el servidor usando el archivo my.cnf, especificando usuario, servidor y la ubicación del directorio de datos.
+            - Una vez configurados estos archivos se puede proceder con la instalación del servidor.
+            - Inciar el proceso mysql server. Se pueden personalizar los script de inicio y finalización.
+    - Practicas de seguridad:
+        - Crear el usuario de proceso del servidor genérico sin permisos avanzados. No necesita realizar la función de adminitración del sistema. No necesita tener acceso completo al sistema de archivos. No necesita acceso a la shell. Pero si requiere acceso a los archivos del directorio de datos y de logs, como así también permisos para gestionar copias de seguridad o scripts que utilice el proceso servidor.
 
+### Initial Configuration
+Algunas veces es necesario realizar cambios de la configuración inicial. Una razón típica de este cambio es tener más control sobre la unicación de los archivos importantes.  
+La variable que controla las ubicaciones de los archivos es __basedir__ y __datadir__ que es el directorio de base de datos.  
+La raíz de la instación puede colocarse en cualquier lugar del sistema. Se pueden instalar varias versiones de mysql en directorios diferentes y crear un enlace simbólico para hacer referencia a cada uno.  
+#### Archivo de Configuración
+Socket: Especifica la ubicación del archivo de socket de Unix que los clientes locales pueden utilizar para conectarse al servidor en lugar de utilizar una conexión tcp.  
+my.cnf en windows es my.ini  
+Si hay errores de configuración el servidor no se ejecuta.  
+Tiene valores por defecto adecuados para la mayoria de los usos.  
+
+Si se realiza la instalación desde un archivo binario, se debe inicializar el directorio de datos ya que esto crea la base de datos del sistema e inicializa el motor de almacenamiento y los archivos de logs.  
+Hay que darle permisos al usuario mysql para que el servidor tenga acceso a los archivos de base de datos.  
+>$> bin/mysqld --initialize --user=mysql>  
+
+Esto crea la cuenta root y muestra la contraseña generada en la consola. Esto es una practica insegura.  
+Una vez configurado el servidor es momento de ejecutarlo. El servicio se llama _mysqld_.  
+Si se desea utilizar una configuración propia para el servicio se puede cambiar el archivo por defecto modificando la variable _--defaults-file=/mysql/my.cnf_.  
+Si se desea cambiar la configuración de red para el inicio de sesión, se debe usar al opción _--bind-addres_.  
+Si se necesita iniciar el servicio sin ningun tipo de seguridad (por ejemplo si se olvida la contraseña de root y necesita cambiarla) se puede utilizar la opción omitir tablas de concesiones _--skip-grant-tables_.  
+
+
+### Updating MySQL
+Para actuzalizarlo es necesario detener el servidor. Si es necesario se deben cambiar los archivos de configuración.  
+Una buena práctica es realizar un backup antes de realizar el upgrade.  
+El proceso de actualización ofrece 2 opciones:  
+    - Interna, utiliza el directorio de datos existente. Sustituir el paquetes con los binarios por el de las nuevas versiones, o instale los nuevos ejecutables binarios.  
+    - Lógica, realizar un backup del servidor para luego instalar la nueva versión como una instlación nueva con un directorio de archivos limpio. Luego restaure la copia de seguridad.  
+
+También es necesario actualizar los archivos de soporte que utilice su aplicación para conectarse a MySQL.  
+Para la versión enterprise es la misma forma de instalar, solo que para descargarlo se tiene un url privado.  
+Usando la shell se puede comporbar el cambio de versión para ello verifica que el archivo de configuración no utiliza palabras reservadas, si no se borraron tipos de datos o se cambiarlos parametros de valores por defecto o ya no existen.  
+El usuario que realiza la comprobación debe tener privilegios de RELOAD, PROCESS y SELECT en el sistema.  
+
+
+## SKILL CHECK: MODULO 3 
+1. Which installation merhod requires that you manually configure the service user?  
+The yum and RPM package installers install and configure MySQL on Linux. The MySQL Installer installs and configures MySQL on Windows. The binary archive only contains the necessary files but does not perform any configuration.  
+2. Which statement is tru about upgrades?  
+Upgrading is an offline operation, performed in-place by replacing existing binaries with the new version. This process also works when upgrading to Enterprise Edition. The Upgrade Checker utility is available in MySQL Shell, and can be used on any MySQL version and edition up to and including the version of MySQL Shell.  
+3. Which permissions are required for the mysql servide user?  
+The MySQL service user needs only privileges to run the process and access the network and relevant directories in the file system. You should not grant permissions beyond that, so that the service cannot be exploited by malicious users.  
+4. Which statement is true about the data directory?  
+The data directory setting datadir specifies the default location of system and user databases, and is one of the settings for file locations. Other settings include locations for temporary files and configuration files.  
+5. How often are MySQL innovation versions released?  
+MySQL long-term support versions are released every two years. Innovation versions are released quarterly.  
