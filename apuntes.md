@@ -156,3 +156,105 @@ The MySQL service user needs only privileges to run the process and access the n
 The data directory setting datadir specifies the default location of system and user databases, and is one of the settings for file locations. Other settings include locations for temporary files and configuration files.  
 5. How often are MySQL innovation versions released?  
 MySQL long-term support versions are released every two years. Innovation versions are released quarterly.  
+
+
+# 4. MySQL Database Design
+## 4.1 Database Design
+### Almacenamiento de Datos
+La capa del motor de almacenamiento forma parte del proceso del servidor. Se interpone entre las partes del servidor responsable de introducir, analizar y optimizar SQL y los sistemas de archivos subyacentes.  
+El motor de almacenamiento estándar se denomina InnoDB. También puede usar otro tipo, por ejemplo MyISAM, NDB Cluster, Memory.  
+MyISAM es rápido y básico pero tiene menos funciones de fiabilidad. Mientras que NDB es un motor distribuido escalable, se ejecuta en varios nodos y utiliza software adicional para gestionar el acceso al clouster.  
+InnoDB soporta concurrencia, es decir, que muchos usuarios accedan a los archivos simultáneamente y manteiene sus cambios separados entre sí. Esto se logra ya que usa transacciones. _Las transacciones permiten a los usuarios realizar cambios de los que se puede realizar un rollback si es necesario y evitar que otros usuarios vean esos cambios hasta que se confirmen o guarden de forma persistente._  
+InnoDB permite la integridad referencial, esto asegura que los datos de una tabla dependiente hacen referencia a solo a datos de origen válidos. Ej: no se puede modificar un dato que no existe. No se puede cambiar la contraseña de un usuario que no existe. 
+InnoDB almacena datos _raw_ en disco en una estructura de árbol B y utiliza algoritmos rápidos para insertar filas en el lugar correcto. Esto permite que los datos se puedan recuperar rápidamente.
+InnoDB utiliza un método similar para almacenar índices. Esto permite ejecutar consultas en función de un orden de clasificación distinta del orden natural de las filas.  
+InnoDB tiene su proprio pool de buffers, se trata de una memoria caché que almacena los datos a los que se ha accedido recientemente, con esto se obtienen lecturas de datos activos mucho mas rápidas que las consultas que se leen desde el disco.  
+InnoDB cuenta con optimización de inserción masiva y multithreading.  
+Por defecto en la instalación de MySQl se define InnoDB como motor de almacenamiento ya que ofrece fiabilidad y alto rendimiento. Soporta sintaxis de transacción, como confirmación y rollback, y es compatible con ACID:  
+* __Atomico__: La transacción puede contener varias sentencias, pero la transación en su conjunto se trata como un cambio que se realiza correcta o incorrectamente.  
+* __Consistente__: Las transacciones se mueven en el sistema de un estado consistente a otro.
+* __Aislado__: Los cambios realizados durante una transacción se aíslan de otros usuarios hasta que se complete esa transacción.
+* __Duradera__: El servidor garantiza que la transacción se mantenga o se escriba en el disco una vez se complete.  
+
+InnoDb soporta cifrado de datos, lo que permite mantener los datos seguros en el disco. También soporta compresión lo que ahorra espacio al costo de un uso adicional del CPU.  
+Se puede configurar un cluster InnoDb de varios nodos de servidor MySQL en varios host para habilitar la alta disponibilidad.  
+El uso de transacciones es fundamental para el uso donde varios usuarios simultáneos pueden cambiar datos.   
+Por defecto, cada sentencia se confirma automáticamente para que no tenga que escribir la confirmación cada vez que actualice una fila. 
+START TRANSACTION es sinonimo de BEGIN cualquiera de ellas se puede utilizar como iniciar una transacción.  
+DML( Lenguaje de manipulacion de datos). Dentro de una transacción no se confirma automaticamente cada sentencia, por lo que debe hacerse manualmente o realizar un rollback para deshacer la transacción. _Esto no es aplicable para DDL (lenguaje de definición de datos)_ como CREATE TABLE. DDL utiliza una confirmación implícita.  
+## 4.2 Database and Tables
+Tanto esquema como la base de datos hacen referencia a recopilaciones de tablas y otros objetos. En MySQl esquema es un sinónimo de base de datos, pero puede pasar que un esquema contenga una base de datos.  
+En los motores de almacenamiento (incluyendo InnoDB) cada base de datos se asigna a un directorio del sistema de archivos (en gral en el directorio de datos). Cada tabla tiene datos de filas almacenados en un archivo. En innoDB este archivo se llama __tablespace__ aunque se puede almacenar las tablas en otro tablespaces.  
+Las bases de datos de esquema de información y MySQL se utilizan para almacentar, presentar información estructural sobre el servidor, incluida la configuración de autenticación y los metadatos de la tabla. También es posible consultar métricas de rendimiento desde el esquema de rendimiento y las bases de datos del sistema. Si se usa un cluster con innoDB se pueden consultar los datos de metadados del cluster.  
+Las columnas deben tener tipos de datos definidos.  
+CHAR es una cadena de ancho fijo mientras que varchar es de ancho variable.  
+ENUM y SET se usan para seleccionar un conjunto de valores definidos.  
+BLOB (binary large object block) pueden contener grandes fragmentos de datos binarios. Ej: Imagenes JPG o audio MP3. 
+TEXT almacena grandes cantidades de datos de texto.  
+Tanto BLOB como TEXT no se almacenan en la misma ubicación que otros datos de la misma fila, esto se hace para mejorar el rendimiento porque muchas consultas en la tabla no consultan los datos blob o text incluidos en la tabla.  
+MySQL soporta datos geográficos o espaciales y consultas sobre esos datos. Incluyen formas de representar puntos, lineas, polígonos y colecciones  de tales elementos.  
+Los tipos de datos JSON permite utilizar a mysql como almacén de documentos. Una columna de este tipo puede contener documentos JSON completos en cada fila. Mysql tiene varias funciones que permiten consultar y buscar valores dentro de dichos documentos.  
+## 4.3 Indexes
+Los índices permiten mejorar el rendimiento de las consultas ya que facilitan la búsqueda de filas específicas. Esto no solo aceleara la consultas, sino que también garantiza que las filas recién insertadas se coloquen la mejor posición del archivo de datos para que las futuras consultas las encuentren rápidamente.  
+Los índices funcionan almacenando los datos raw o un subjuego de los datos raw en algún orden definido. Un índice se puede ordenar en algún valor no único, como el nombre de una persona o también puede crear un índice en algún valor que debe ser único dentro de la tabla (como un ID). El índice principal, a veces llamado índice agrupado, son los datos completos de la tabla almacenados en un valor único denominado _clave primaria_.  
+InnoDB soporta distintos tipos de índices. Los datos raw de la mayoría de los índices secundarios se almacenan en una estructura **BTREE**. Almacena datos en cubos específicos basados en la clave de índice mediante páginas de datos de tamaño fijo. También tiene una función HASH adaptable, que se inicia automáticamente para tablas y cargas de trabajo pequeñas que se benefician de ellas. Los datos espaciales se indexan utilizando la estructura **TRTREE**.
+Buenas prácticas para los índices:
+* Crear una PK en cada tabla. Este valor es único para cada fila y se utiliza para ordenar los datos de la fila. InnoDB no necesita que la tabla tenga una PK explícita, pero si no se la define crea una PK oculta.
+* Cada índice secundario es una parte de los datos ordenados por otra columna. Cada entrada de índice utiliza la PK como una consulta al resto de la fila. Si la PK es grande o compleja aumenta el requerimento de almacenamiento de cada índice.
+* Cada vez que se modifaca una fila mysql debe actualizar todos los índices. A más indices tiene una tabla más lenta será cada operación inserción. MYSQL Enterprise Monitor tiene funciones para identificar los índices que no se utilizan.
+* Utilice prefijos y claves compuestas para reducir índices. Una clave de prefijo contiene solo la primera parte de una cadena (util cuando se tiene gran cantidad de datos). Una cable compuesta contiene varias columnas, esto acelera la búsqueda porque el índice secundario puede completar la consulta sin necesidad de volver a buscar las PK.  
+__El indice secundario utiliza la PK para buscar la fila completa__.
+
+## 4.4 Joins
+Permite realizar consultas de varias tablas que cumplan cierta condición. Hay 4 tipos: inner, left, right y full. También está la opción semijoin que contiene solo los datos de una tabla.  
+El comando __EXPLAIN__ permite examinar consultas y cómo las procesará mysql. Muestra las tablas e índices involucrados en la consulta, esto funciona tanto en DDL como en DML.  
+## 4.5 Partitioning
+Permite dividir el contenido de una tabla de acuerdo a determinadas reglas. Esto permite dividir los datos de una tabla grande en diferentes discos, como también separar aquellos datos que son accedidos frecuentemente en un almacenamiento con menor costo de lectura.  
+Esta función solo es soportada en la versión Enterprise.  
+## SKILL CHECK - MODULO 4
+1. Wich is the default mysql storage engine?
+InnoDB
+2. what is performed by the join clause in sql?
+The JOIN clause uses a condition to decide which row in the table named on the left side is connected to which row on the right side.  
+3. Which statement is true about PRIMARY indexes?
+The PRIMARY index manages the primary key of a table. Its values must be unique and are used as a lookup value for all secondary indexes. PK values are replicated to every secundary index.  
+4. What can you accomplish using mysql partitioning?
+MySQL Partitioning enables you to select the physical location of rows based on a rule that specifies some condition in each row.
+5. Which data type stores string values?
+ENUM.  
+
+# 5. Database Security
+## SKILL CHECK - MODULO 5
+1. Which type of compliance do GDPR, HIPAA, FERPA, and GLBA impose that mysql can implement?
+The acronyms in the question refer to legal provisions in multiple jurisdictions, all of which provide regulatory frameworks which must be complied with by applicable organizations.
+2. Which product can mitigate the risk of SQL inyection attacks?
+MySQL Enterprise Firewall enables you to create an allow list of statements, and it blocks statements that do not match that allow list. SQL injection attacks attempt to insert SQL statements within user interfaces, and if those statements are not in the allow list then they are prevented from executing.
+3. Which statement about dynamic privileges is true?
+They are assigned by the server, a plugin, or a component at load time.
+Dynamic privileges are granted by the server at run time, either during the startup process or by plugins and components as they are loaded. They may also be granted explicitly with GRANT statements. They are not specified in configuration files.
+4. What is a default Mysql authentication plugin used to encrypt password?
+MySQL encrypts passwords before storing them in the database. The caching_sha2_password plugin uses a secure one-way encryption algorithm to create passwords that cannot easily be decrypted, even if the database is compromised.
+5. Which mysql enterprise feature supports kerberos, pam and fido?
+MySQL Enterprise Authentication brings together a set of plugins that support authentication with external infrastructure based on LDAP, Kerberos, or using the Pluggable Authentication Module (PAM) framework in Linux.
+
+# 6. Enterprise Security Tools
+## SKILL CHECK - MODULO 6
+1. Against what does mysql enterprise firewall provide real-time protection?
+SQL injection is one of the most common and dangerous attacks a database could face. MySQL Enterprise Firewall is an application-level firewall that protects the MySQL Server against such an attack by permitting or denying SQL statement execution based on matching against lists of accepted statement patterns.
+2. What file can you encrypt using mysql enterprise transparent data encryption (TDE)?
+MySQL stores table data in a tablespace file. Using MySQL Enterprise Transparent Data Encryption (TDE), you can encrypt these files to protect the privacy of your information, prevent data breaches and help meet regulatory requirements. TDE can also encrypt log files such as binary, relay, undo, and redo logs, but it cannot encrypt general query, slow query, and error log file.
+3. Which two formatting options are supported by mysql enterprise audit?
+The supported audit log file formats are XML and JSON. The default is XML. However, this can be changed at server startup by setting the audit_log_format variable.
+4. When using mysql TDE, which key must be stored outside the database?
+InnoDB uses a two-tier encryption key architecture, consisting of a master key and tablespace keys. When a tablespace is encrypted, a tablespace key is encrypted and stored in the tablespace header. InnoDB uses a master encryption key to decrypt the tablespace key when accessing encrypted data. It is the master key that must be stored outside the database (in a key vault) and should be rotated periodically or whenever you suspect that the key has been compromised and this key.
+5. In which two ways can you install the mysql enterprise masking and de-identification feature?
+MySQL Enterprise Masking and De-Identification feature can be implemented through either a plugin or a component. Plugins are a set of loadable functions that provide a SQL-level API for performing operations such as masking and de-identification. Components are self-contained code containers that interact with other code exclusively by implementing and consuming services via the registry. However, enabling both at the same time is unsupported and results may not be as anticipated.
+
+# 7. MySQL BACKUP
+## 7.1 Backups type
+* Bakcup Logico: Es un script que contiene secuencias SQL. Se puede hacer con mysqldump, mysqlshell o data export (exporta la información en formato cvs).
+* Backup Físico: Consiste en copiar los archivos del sistema de archivos, por ejemplo el spacetables (archivo que contiene la información de las tablas).
+* Se pueden hacer backups completos que contiene una imagen fisica y lógica de toda la base de datos, esta demora demasiado tiempo en compleatarse y restaurarse. 
+* Backup Incremental, solo contiene los cambios realizados desde el último backup completo. Estos cambios los obtiene de los archivos log binarios. Para restaurar este tipo de bk es necesario restaurar el bk completo y cualquier bk incremental anterior a este.
+## 7.2 Adventages and Disadventages
+* Snapshot: Es rápido. Suele ser una función del sistema de archivos subyacente (por ejemplo del SO). Desventajas:-- El snapshot puede realizarse mientras se está ejecutando una transacción, por lo que puede causar inconsistencias. Para evitar es neceario parar el servicio al momento de hacer el snap. Es una copia del sistema de archivos no de la base de datos en sí. El acumular snap ocupa espacio y se ve afectada las operaciones de escritura, por lo que es recomendable borrar aquellas que ya no estén en uso. No son adecuadas para mover bk entre sistemas.
