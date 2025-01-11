@@ -258,3 +258,83 @@ MySQL Enterprise Masking and De-Identification feature can be implemented throug
 * Backup Incremental, solo contiene los cambios realizados desde el último backup completo. Estos cambios los obtiene de los archivos log binarios. Para restaurar este tipo de bk es necesario restaurar el bk completo y cualquier bk incremental anterior a este.
 ## 7.2 Adventages and Disadventages
 * Snapshot: Es rápido. Suele ser una función del sistema de archivos subyacente (por ejemplo del SO). Desventajas:-- El snapshot puede realizarse mientras se está ejecutando una transacción, por lo que puede causar inconsistencias. Para evitar es neceario parar el servicio al momento de hacer el snap. Es una copia del sistema de archivos no de la base de datos en sí. El acumular snap ocupa espacio y se ve afectada las operaciones de escritura, por lo que es recomendable borrar aquellas que ya no estén en uso. No son adecuadas para mover bk entre sistemas.
+## 7.3 Adventages and Disadventages - Mysql Enterprise Backup
+Es una forma de copia de seguridad física en su núcleo por lo que es más rápido para grandes juegos de datos que los backup lógicos.  
+Como se realiza una copia de los archivos de datos, no se bloquea el servidor y permite realizar copias de seguridad completas del sistemas o parciales. 
+Se puede hacer bakups tanto de archivos locales como de archivos en el cloud.  
+Permite hacer copias de seguridad incrementales. Se pueden comprimir y cifrar.  
+Soporta SBT. Soporta backup optimista, regitra los cambios durante una copia de seguridad para garantizar la consistencia. En conjunto de grandes datos, esto marca una gran diferencia en el rendimiento.  
+
+## SKILL CHECK: MySQL BACKUP
+1. How does mysql enterprise backup support optimistic backup?
+MySQL Enterprise Backup supports optimistic backup. This process deals with busy tables separately from the rest of the database. It can record changes that happen in the database during the backup, for consistency. In a large dataset, this can make a huge difference in performance.
+2. Which statement is true about the mysqldump utility?
+The mysqldump utility has long been a standard way to create logical backups. It creates a script made up of the SQL statements that re-create the data and structure in a database or server. As a text file, it can be edited and managed by source code management systems.
+3. What makes a database backup effective?
+No backup is effective unless you can use it to restore your data. It is important to not just create backups, but to also regularly test the restoration process to ensure it works effectively.
+4. What is the mysql enterprise backup utility designed for?
+MySQL Enterprise Backup is a utility designed specifically for backing up MySQL systems in the most efficient and flexible way. At its simplest, it performs a physical backup of the data files, so it is fast. However, it also records the changes that were made during the time it took to do the backup, so the result is that you get a consistent backup of the data at the time the backup completed.
+5. What must you do to restore from backup using mysql enterprise backup?
+To restore from a backup using MySQL Enterprise Backup, you must first remove any previous files from the data directory. The restore process will fail if you attempt to restore over an existing system or backup.
+
+# 8. MySQL REPLICATION
+## SKILL CHECK: MySQL REPLICATION
+1. Which thread is responsible for taking a copy of the binary log events from the source and writing those to a relay log?
+The I/O thread reads the updates that the source's binlog dump thread sends and copies them to local files that comprise the replica's relay log. The state of this thread is shown as Slave_IO_running in the output of SHOW REPLICA STATUS.
+2. Which thread reads the relay log and executes the transactions that it contains the replica?
+The replica creates a SQL thread to read the relay log that is written by the replication I/O thread and execute the transactions contained in it.
+3. Which thread maintains an open connection to the source when the replica connects and is used the binary log contents from the source to a replica?
+The source creates an I/O binlog dump thread to send the binary log contents to a replica when the replica connects. This thread can be identified in the output of SHOW PROCESSLIST on the source as the binlog dump thread.
+4. What uses the relay log?
+The relay log is written by the I/O thread and contains the transactions read from the replication source server's binary log. The relay log is stored on the replica and used by the replica. The transactions in the relay log are applied on the replica by the SQL thread.
+5. What is one requirement on the source to enable source-replica replication?
+The binary log contains "events" that describe database changes such as table creation operations or changes to table data. Binary logging must be enabled on a replication source so the record of data changes can be sent to the replicas.
+
+# 9. ENABLING HIGH AVIALABILITY IN MYSQL
+## SKILL CHECK: ENABLING HIGH AVIALABILITY IN MYSQL
+1. Which mysql component automates Innodb cluster creation and makes managing the cluster easy?
+MySQL Shell uses AdminAPI which allows you to easily deploy, configure, and administer InnoDB Cluster, InnoDB ClusterSet, and InnoDB ReplicaSet.
+2. Which mysql component provides automatic failover when using innodb cluster?
+Each MySQL server instance in an InnoDB Cluster runs MySQL Group Replication, which provides the mechanism to replicate data within an InnoDB Cluster, with built-in failover.
+3. Which two are not used when setting up mysql innodb replicaset?
+When setting up a MySQL InnoDB ReplicaSet, MySQL Router and MySQL Shell are used. MySQL Shell provides the AdminAPI which allows you to easily deploy, configure, and administer the ReplicaSet, whereas MySQL Router provides transparent routing between your application and InnoDB ReplicaSet. MySQL Workbench and Group Replication are not used.
+4. What is the recovery point objetive (RPO) or data loss tolerance within a region when using mysql innodb cluster?
+MySQL InnoDB Cluster is made up of three MySQL instances: a primary instance, and two secondary instances. All data that you write to the primary instance is copied to the secondary instances using Group Replication. InnoDB Cluster guarantees if one instance fails, another takes over, with zero data loss and minimal downtime.
+5. Which mysql component redirects application queries to available nodes in a innodb cluster?
+MySQL Router can automatically configure itself based on the cluster you deploy, connecting client applications transparently to the server instances. In the event of an unexpected failure of a server instance, the cluster reconfigures automatically.
+
+
+# 10. Monitoring MySQL
+# 10.1 Monitoring MySQL
+Por que anda lento? Se deben verificar aquellas consultas que tardan más tiempo, esto puede pasar porque no están indexadas correctamente.  
+El 90% de los problemas de rendimiento provienen de las consultas sql, índices mal utilizados y de la mala elecciond de tipos de datos en los esquemas.  
+## SKILL CHECK:
+1. Slow query log is used to capture long-running SQL statements
+By default, administrative statements are not logged, nor are queries that do not use indexes for lookups. This behavior can be changed using log_slow_admin_statements and log_queries_not_using_indexes.
+2. What can you do with mysql in oracle enterprise manager?
+The Oracle Enterprise Manager tool is used to monitor the following MySQL activities: Performance, System availability, replication topology, InnoDB performance characteristics and locking, bad queries caught by the MySQL Enterprise firewall, and events that are raised by MySQL Enterprise Audit.
+3. What does the mysql performance schema do?
+One important monitoring feature in MySQL is the Performance Schema. It’s a system database that provides statistics of how MySQL executes at a low level. The performance information belongs only to the specific instance, so it isn’t replicated to other systems.
+4. Which part of the database is the highest source of database performance problems?
+90% of Performance Problems come from the SQL, index, and Schema group. Poor SQL query design or incorrect use of indexes can significantly impact database performance.
+5. Which mysql schema has its own dedicated storage engine?
+It is the Performance schema that has its own dedicated engine called PERFORMANCE_SCHEMA to store performance data, whereas mysql, world, and sakila schemas use the default InnoDB storage engine.
+
+# 11. HeatWave
+1. Which database plataform does heatwave use to store OLTP data?
+HeatWave uses MySQL Enterprise Edition to store OLTP data.
+2. From which cloud service can you use heatwave?
+HeatWave is not just available in Oracle Cloud Infrastructure. You can use HeatWave from your applications in Amazon Web Services and Microsoft Azure too, and at a great price.
+3. Which machine lerning technique is NOT supported by heatwave ml?
+HeatWave ML currently supports Anomaly Detection, Classification, Forecasting, Recommendation Systems, and Regression techniques. Clustering is a technique that looks for similar data points and groups them together based on certain features. Clustering is not supported by HeatWave ML.
+4. Which action can you perform using the heatwave service web-based console?
+The HeatWave service is a fully-managed MySQL. Through the web-based console, you can deploy your instances and manage their backups, enable high availability, resize your instances, create read replicas and perform many common administration tasks without writing a line of SQL.
+5. Which heatwave feature allows you to query data from object storage?
+HeatWave Lakehouse enables query processing on data resident in Object Storage. The file formats supported by this feature are Avro, CSV, JSON, and Parquet.
+
+Finalizado.
+
+
+
+
+
